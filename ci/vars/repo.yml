@@ -3,5 +3,5 @@
 #
 #   fly -t lab set-pipeline -p mule-app -c ci/pipeline.yml -l ci/vars/repo.yml
 #
-mule_repo_uri: https://github.com/TWOJ_USER/mule-vault-demo.git
+mule_repo_uri: https://github.com/arturwojciechowski13/mule-vault-demo.git
 mule_repo_branch: main
