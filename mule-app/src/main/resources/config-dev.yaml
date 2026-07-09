@@ -1,0 +1,11 @@
+# Przykladowy plik konfiguracyjny aplikacji Mule dla srodowiska DEV.
+# Placeholdery {{...}} sa podmieniane przez task Concourse "replace-placeholders"
+# na wartosci pobrane w danym momencie z Vault.
+db:
+  host: mydb-dev.internal
+  port: 5432
+  username: mule_dev_user
+  password: {{db_password}}
+
+api:
+  key: {{api_key}}

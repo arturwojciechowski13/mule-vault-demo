@@ -1,0 +1,25 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: alpine
+    tag: "3.19"
+
+inputs:
+  - name: mule-package
+
+params:
+  ENVIRONMENT:
+
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      echo "=== Symulacja deployu do srodowiska: ${ENVIRONMENT} ==="
+      echo "Plik configu, ktory poszedlby na Anypoint/CloudHub:"
+      cat "mule-package/config-${ENVIRONMENT}.yaml"
+      echo ""
+      echo "Deploy zakonczony sukcesem (mock)."

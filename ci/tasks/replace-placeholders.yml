@@ -1,0 +1,37 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: alpine
+    tag: "3.19"
+
+inputs:
+  - name: mule-repo
+
+outputs:
+  - name: resolved-config
+
+params:
+  DB_PASSWORD:
+  API_KEY:
+  ENVIRONMENT:
+
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      SRC="mule-repo/mule-app/src/main/resources/config-${ENVIRONMENT}.yaml"
+      DEST="resolved-config/config-${ENVIRONMENT}.yaml"
+
+      cp "$SRC" "$DEST"
+      sed -i "s/{{db_password}}/${DB_PASSWORD}/" "$DEST"
+      sed -i "s/{{api_key}}/${API_KEY}/" "$DEST"
+
+      echo "=== Plik przed podstawieniem ==="
+      cat "$SRC"
+      echo ""
+      echo "=== Plik po podstawieniu wartosci z Vault ==="
+      cat "$DEST"

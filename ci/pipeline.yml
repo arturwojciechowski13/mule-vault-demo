@@ -1,0 +1,55 @@
+resources:
+  - name: mule-repo
+    type: git
+    source:
+      uri: ((mule_repo_uri))
+      branch: ((mule_repo_branch))
+
+jobs:
+  # --- Srodowisko DEV ---
+  - name: build-and-deploy-dev
+    plan:
+      - get: mule-repo
+        trigger: true
+
+      # Ten krok idzie do Vault po wartosci pod ((mule-app/dev/db_password))
+      # i ((mule-app/dev/api_key)) - Concourse robi to samo, przy kazdym
+      # uruchomieniu, bez zapisywania sekretu na stale w definicji pipeline'u.
+      - task: replace-placeholders
+        file: mule-repo/ci/tasks/replace-placeholders.yml
+        params:
+          DB_PASSWORD: ((mule-app/dev/db_password))
+          API_KEY: ((mule-app/dev/api_key))
+          ENVIRONMENT: dev
+
+      - task: build-mule-app
+        file: mule-repo/ci/tasks/build-app.yml
+
+      - task: deploy-mule-app
+        file: mule-repo/ci/tasks/deploy-app.yml
+        params:
+          ENVIRONMENT: dev
+
+  # --- Srodowisko PROD ---
+  # Ten job odpala sie dopiero, gdy "build-and-deploy-dev" przejdzie
+  # (passed: [...]) - typowy wzorzec promocji miedzy srodowiskami.
+  - name: build-and-deploy-prod
+    plan:
+      - get: mule-repo
+        passed: [build-and-deploy-dev]
+        trigger: false
+
+      - task: replace-placeholders
+        file: mule-repo/ci/tasks/replace-placeholders.yml
+        params:
+          DB_PASSWORD: ((mule-app/prod/db_password))
+          API_KEY: ((mule-app/prod/api_key))
+          ENVIRONMENT: prod
+
+      - task: build-mule-app
+        file: mule-repo/ci/tasks/build-app.yml
+
+      - task: deploy-mule-app
+        file: mule-repo/ci/tasks/deploy-app.yml
+        params:
+          ENVIRONMENT: prod

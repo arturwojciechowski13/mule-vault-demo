@@ -1,0 +1,8 @@
+db:
+  host: mydb-prod.internal
+  port: 5432
+  username: mule_prod_user
+  password: {{db_password}}
+
+api:
+  key: {{api_key}}

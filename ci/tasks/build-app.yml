@@ -1,0 +1,27 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: alpine
+    tag: "3.19"
+
+inputs:
+  - name: resolved-config
+
+outputs:
+  - name: mule-package
+
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      echo "=== Symulacja 'mvn clean package' ==="
+      mkdir -p mule-package
+      cp resolved-config/*.yaml mule-package/
+      echo "mule-app-1.0.0" > mule-package/artifact-version.txt
+
+      echo "Zbudowany artefakt (mock):"
+      ls -la mule-package
