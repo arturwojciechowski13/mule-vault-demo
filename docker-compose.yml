@@ -1,0 +1,58 @@
+services:
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+
+  concourse-db:
+    image: postgres:15
+    container_name: concourse-db
+    environment:
+      POSTGRES_DB: concourse
+      POSTGRES_USER: concourse
+      POSTGRES_PASSWORD: concourse
+      PGDATA: /database
+    volumes:
+      - concourse-db-data:/database
+
+  concourse:
+    image: concourse/concourse:latest
+    container_name: concourse
+    command: quickstart
+    privileged: true
+    depends_on:
+      - concourse-db
+      - vault
+    ports:
+      - "8080:8080"
+    environment:
+      CONCOURSE_POSTGRES_HOST: concourse-db
+      CONCOURSE_POSTGRES_USER: concourse
+      CONCOURSE_POSTGRES_PASSWORD: concourse
+      CONCOURSE_POSTGRES_DATABASE: concourse
+      CONCOURSE_EXTERNAL_URL: http://localhost:8080
+      CONCOURSE_ADD_LOCAL_USER: test:test
+      CONCOURSE_MAIN_TEAM_LOCAL_USER: test
+      # Docker Desktop (macOS) uzywa cgroup v2 - domyslny runtime "guardian"
+      # probuje montowac cgroup v1 i wywala sie z "operation not permitted".
+      # "containerd" jest zgodny z cgroup v2.
+      CONCOURSE_WORKER_RUNTIME: containerd
+      # Host resolv.conf wskazuje na 127.0.0.11 (wewnetrzny DNS Dockera),
+      # co nie jest osiagalne z wnetrza kontenerow tworzonych przez containerd
+      # (resource/task) - trzeba podac jawnie realny serwer DNS.
+      CONCOURSE_CONTAINERD_DNS_SERVER: 8.8.8.8
+      CONCOURSE_CONTAINERD_DNS_PROXY_ENABLE: "true"
+      # --- integracja z Vault (credential manager) ---
+      CONCOURSE_VAULT_URL: http://vault:8200
+      CONCOURSE_VAULT_CLIENT_TOKEN: root
+      CONCOURSE_VAULT_PATH_PREFIX: /concourse
+      CONCOURSE_VAULT_INSECURE_SKIP_VERIFY: "true"
+
+volumes:
+  concourse-db-data:

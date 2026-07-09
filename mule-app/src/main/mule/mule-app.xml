@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <!--
+        Ktory plik zaladowac zalezy od property systemowej "env"
+        (przekazywanej przy starcie runtime'u: -M-Denv=dev / -M-Denv=prod).
+        Placeholdery {{db_password}} / {{api_key}} w tym pliku sa juz
+        PODMIENIONE przez pipeline (task replace-placeholders) zanim
+        appka trafila do paczki/deployu - tutaj w runtime nie ma juz
+        odwolania do Vault, jest juz gotowa wartosc.
+    -->
+    <configuration-properties file="config-${env}.yaml" />
+
+    <http:listener-config name="httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+
+    <flow name="health-check-flow">
+        <http:listener config-ref="httpListenerConfig" path="/health" />
+        <set-payload value="#[%dw 2.0 output application/json --- { status: 'UP' }]" />
+    </flow>
+
+    <!--
+        Ten endpoint istnieje wylacznie po to, zeby na wlasne oczy
+        zobaczyc, czy podstawienie sekretu faktycznie zadzialalo:
+        curl http://localhost:8081/config
+        Nie zwraca surowego hasla - tylko fakt, ze placeholder zostal
+        zastapiony realna wartoscia (dbPasswordResolved: true/false).
+    -->
+    <flow name="show-config-flow">
+        <http:listener config-ref="httpListenerConfig" path="/config" />
+        <logger level="INFO"
+                message="db.host=#[p('db.host')] db.username=#[p('db.username')]" />
+        <set-payload value='#[%dw 2.0
+output application/json
+---
+{
+    dbHost: p("db.host"),
+    dbUsername: p("db.username"),
+    dbPasswordResolved: p("db.password") != "{{db_password}}",
+    apiKeyResolved: p("api.key") != "{{api_key}}"
+}]' />
+    </flow>
+
+</mule>

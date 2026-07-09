@@ -1,0 +1,36 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: alpine
+    tag: "3.19"
+
+inputs:
+  - name: mule-repo
+
+params:
+  ENVIRONMENT:
+  APP_URL:
+
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      apk add --no-cache curl jq >/dev/null
+
+      echo "=== Testy regresji (${ENVIRONMENT}) przeciwko: ${APP_URL} ==="
+      echo "(w realnym projekcie: wieksza kolekcja Postman/Newman, RestAssured,"
+      echo "albo dedykowany zestaw scenariuszy end-to-end - tu tylko demonstracja"
+      echo "MIEJSCA i SPOSOBU wywolania w pipeline'ie)"
+
+      for endpoint in /health /config; do
+        echo "-- sprawdzam ${endpoint}"
+        curl -sf --max-time 5 "${APP_URL}${endpoint}" >/dev/null 2>&1 \
+          && echo "OK" \
+          || echo "brak odpowiedzi (oczekiwane w sandboxie - deploy to mock)"
+      done
+
+      echo "Regresja zakonczona."

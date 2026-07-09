@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+        http://www.mulesoft.org/schema/mule/munit-tools http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+    <!--
+        MUnit odpala flow na EMBEDDED runtime Mule w trakcie "mvn test" -
+        nie potrzeba wdrozonej appki ani prawdziwego Vault/Concourse.
+        To pierwsza linia obrony: sprawdzamy logike flowa w izolacji.
+    -->
+    <munit:config name="show-config-flow-test-suite.xml" />
+
+    <munit:test name="show-config-flow-zwraca-dbHost"
+                description="show-config-flow powinien zwrocic dbHost z configu">
+        <munit:execution>
+            <flow-ref name="show-config-flow" />
+        </munit:execution>
+        <munit:validation>
+            <munit-tools:assert-that
+                expression="#[payload.dbHost]"
+                is="#[MunitTools::notNullValue()]" />
+        </munit:validation>
+    </munit:test>
+
+</mule>

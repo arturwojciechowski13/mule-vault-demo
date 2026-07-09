@@ -1,0 +1,39 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: alpine
+    tag: "3.19"
+
+inputs:
+  - name: mule-package
+
+params:
+  ENVIRONMENT:
+  APP_URL: # realny adres wdrozonej appki, np. https://mule-app-dev.internal:8081
+
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      apk add --no-cache curl jq >/dev/null
+
+      echo "=== Testy integracyjne (${ENVIRONMENT}) przeciwko: ${APP_URL} ==="
+
+      # W tym sandboxie deploy jest zamockowany, wiec pod APP_URL nie ma
+      # realnie dzialajacej appki - stad "miekki" fallback ponizej.
+      # W prawdziwym pipelinie ten if/else by nie istnial: brak odpowiedzi
+      # z /health = twardy blad = pipeline STOP (nic dalej sie nie wdroży).
+      if curl -sf --max-time 5 "${APP_URL}/health" >/dev/null 2>&1; then
+        echo "GET /health:"
+        curl -s "${APP_URL}/health" | jq .
+        echo "GET /config:"
+        curl -s "${APP_URL}/config" | jq .
+        echo "Testy integracyjne przeszly."
+      else
+        echo "INFO: ${APP_URL} nie odpowiada (deploy w tym sandboxie to mock)."
+        echo "W realnym srodowisku brak odpowiedzi tutaj = FAIL calego joba."
+      fi

@@ -1,0 +1,21 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: maven
+    tag: "3.9-eclipse-temurin-17"
+
+inputs:
+  - name: mule-repo
+
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      echo "=== mvn test (uruchamia MUnit - testy jednostkowe flowow) ==="
+      cd mule-repo/mule-app
+      mvn -q -B test
+      echo "Testy jednostkowe przeszly."

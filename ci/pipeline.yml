@@ -5,11 +5,27 @@ resources:
       uri: ((mule_repo_uri))
       branch: ((mule_repo_branch))
 
+  # Resource typu "time" - zamiast reagowac na zmiane w gicie, odpala sie
+  # cyklicznie. Uzywane tu do triggerowania nocnej regresji.
+  - name: nightly
+    type: time
+    source:
+      interval: 24h
+
 jobs:
-  # --- Srodowisko DEV ---
+  # --- 1. Testy jednostkowe (MUnit) - pierwsza linia obrony ---
+  - name: unit-tests
+    plan:
+      - get: mule-repo
+        trigger: true
+      - task: run-unit-tests
+        file: mule-repo/ci/tasks/run-unit-tests.yml
+
+  # --- 2. Srodowisko DEV ---
   - name: build-and-deploy-dev
     plan:
       - get: mule-repo
+        passed: [unit-tests]
         trigger: true
 
       # Ten krok idzie do Vault po wartosci pod ((mule-app/dev/db_password))
@@ -30,7 +46,13 @@ jobs:
         params:
           ENVIRONMENT: dev
 
-  # --- Srodowisko PROD ---
+      - task: run-integration-tests
+        file: mule-repo/ci/tasks/run-integration-tests.yml
+        params:
+          ENVIRONMENT: dev
+          APP_URL: http://mule-app-dev.internal:8081
+
+  # --- 3. Srodowisko PROD ---
   # Ten job odpala sie dopiero, gdy "build-and-deploy-dev" przejdzie
   # (passed: [...]) - typowy wzorzec promocji miedzy srodowiskami.
   - name: build-and-deploy-prod
@@ -53,3 +75,22 @@ jobs:
         file: mule-repo/ci/tasks/deploy-app.yml
         params:
           ENVIRONMENT: prod
+
+      - task: run-integration-tests
+        file: mule-repo/ci/tasks/run-integration-tests.yml
+        params:
+          ENVIRONMENT: prod
+          APP_URL: http://mule-app-prod.internal:8081
+
+  # --- 4. Nocna regresja na prod - trigger inny niz git ---
+  - name: nightly-regression-prod
+    plan:
+      - get: nightly
+        trigger: true
+      - get: mule-repo
+        passed: [build-and-deploy-prod]
+      - task: run-regression-tests
+        file: mule-repo/ci/tasks/run-regression-tests.yml
+        params:
+          ENVIRONMENT: prod
+          APP_URL: http://mule-app-prod.internal:8081
